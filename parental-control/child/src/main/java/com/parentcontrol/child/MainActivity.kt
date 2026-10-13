@@ -23,7 +23,7 @@ class MainActivity : Activity() {
     private val ink=Color.rgb(30,41,59)
     private val muted=Color.rgb(100,116,139)
 
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); window.statusBarColor=navy; window.navigationBarColor=Color.rgb(245,247,252); window.decorView.systemUiVisibility=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR; showAuth() }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); window.statusBarColor=navy; window.navigationBarColor=Color.rgb(245,247,252); window.decorView.systemUiVisibility=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR; showLogin() }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     private fun shape(color:Int,radius:Int=20,stroke:Int=0)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat(); if(stroke!=0) setStroke(dp(1),stroke) }
     private fun text(value:String,size:Float,color:Int,bold:Boolean=false)=TextView(this).apply { text=value; textSize=size; setTextColor(color); if(bold) setTypeface(typeface,Typeface.BOLD) }
@@ -56,14 +56,30 @@ class MainActivity : Activity() {
         },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
     }
     private fun note(parent:LinearLayout,message:String,color:Int=muted) { parent.addView(text(message,13f,color).apply { setPadding(0,dp(8),0,dp(8)) }) }
-    private fun showAuth() {
-        base("FAMILY • CHILD","Stay connected,\nstay in control.", "Pair your device with your parent transparently and securely.")
+    private fun showLogin() {
+        base("FAMILY • CHILD","Welcome back.","Sign in to view your device and pairing options.")
         val c=card()
-        c.addView(text("Your account",20f,ink,true)); note(c,"This app stays visible on your device. No hidden monitoring.")
+        c.addView(text("Login",22f,ink,true))
+        note(c,"Use your existing child account details.")
         val email=field(c,"Email address","you@example.com")
-        val password=field(c,"Password","At least 6 characters",true)
-        button(c,"Create child account") { authenticate(email.text.toString(),password.text.toString(),true) }
-        button(c,"Sign in",false) { authenticate(email.text.toString(),password.text.toString(),false) }
+        val password=field(c,"Password","Your password",true)
+        button(c,"Sign in") { authenticate(email.text.toString(),password.text.toString(),false) }
+        button(c,"Create a new account",false) { showSignup() }
+        note(c,"New here? Create an account first.")
+    }
+    private fun showSignup() {
+        base("FAMILY • CHILD","Create account.","Create your account before entering a parent pairing code.")
+        val c=card()
+        c.addView(text("Sign up",22f,ink,true))
+        note(c,"This app remains visible on your device. No hidden monitoring.")
+        val email=field(c,"Email address","you@example.com")
+        val password=field(c,"Create password","At least 6 characters",true)
+        val confirm=field(c,"Confirm password","Enter the password again",true)
+        button(c,"Create child account") {
+            if(password.text.toString()!=confirm.text.toString()) { error("Passwords do not match","Enter the same password in both fields."); return@button }
+            authenticate(email.text.toString(),password.text.toString(),true)
+        }
+        button(c,"Already have an account? Login",false) { showLogin() }
     }
     private fun authenticate(email:String,password:String,create:Boolean) {
         if(!android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() || password.length<6) { error("Check your details","Enter a valid email and a password with at least 6 characters."); return }
@@ -72,8 +88,8 @@ class MainActivity : Activity() {
             val uid=auth.currentUser?.uid ?: return@addOnSuccessListener
             db.child("users").child(uid).updateChildren(mapOf("role" to "child","email" to email.trim()))
                 .addOnSuccessListener { showDashboard() }
-                .addOnFailureListener { error("Profile could not be saved",explainDatabaseError(it.message ?: "Unknown database error")) }
-        }.addOnFailureListener { error("Sign-in failed",explainAuthError(it.message ?: "Unknown authentication error")) }
+                .addOnFailureListener { showDashboard(); error(if(create) "Account created, profile save blocked" else "Login succeeded, profile update blocked",explainDatabaseError(it.message ?: "Unknown database error")) }
+        }.addOnFailureListener { error(if(create) "Sign-up failed" else "Login failed",explainAuthError(it.message ?: "Unknown authentication error")) }
     }
     private fun showDashboard() {
         val uid=auth.currentUser?.uid ?: return
