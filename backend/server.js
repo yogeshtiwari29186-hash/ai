@@ -53,6 +53,23 @@ async function replicateRequest(path, options = {}) {
   return body;
 }
 
+// Lightweight per-process throttle for starter deployments. Use a persistent limiter for production.
+const requestBuckets = new Map();
+app.use("/api/videos", (req, res, next) => {
+  if (req.method !== "POST") return next();
+  const now = Date.now();
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  const bucket = requestBuckets.get(key) || { startedAt: now, count: 0 };
+  if (now - bucket.startedAt >= 60 * 60 * 1000) {
+    bucket.startedAt = now;
+    bucket.count = 0;
+  }
+  bucket.count += 1;
+  requestBuckets.set(key, bucket);
+  if (bucket.count > 5) return res.status(429).json({ error: "Generation limit reached for this IP. Try again in about an hour." });
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "ai-video-maker-backend", configured: Boolean(REPLICATE_API_TOKEN) });
 });
