@@ -228,7 +228,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 var attempts = 0
                 while (videoUrl.isBlank() && status !in listOf("succeeded", "failed", "canceled") && attempts < 180) {
                     Thread.sleep(5000)
-                    val state = apiRequest("$base/api/videos/\${Uri.encode(id)}", "GET", null)
+                    val state = apiRequest("$base/api/videos/${Uri.encode(id)}", "GET", null)
                     status = state.optString("status", status)
                     videoUrl = state.optString("videoUrl")
                     val stateError = state.optString("error")
@@ -247,7 +247,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         .setDescription("Generated video")
                         .setMimeType("video/mp4")
                         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "AI-Video-\${System.currentTimeMillis()}.mp4")
+                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "AI-Video-${System.currentTimeMillis()}.mp4")
                     val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                     manager.enqueue(request)
                     generateVideoButton.text = "Generate another AI video"
@@ -255,7 +255,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    resultText.text = "AI video generation failed.\n\${e.message ?: "Unknown error"}\n\nYour storyboard is still available above."
+                    resultText.text = "AI video generation failed.\n${e.message ?: "Unknown error"}\n\nYour storyboard is still available above."
                     generateVideoButton.text = "Retry AI video generation"
                     toast("Could not generate video.")
                 }
