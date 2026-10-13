@@ -211,12 +211,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             toast("Deploy the backend and enter its HTTPS URL.")
             return
         }
+        val selectedFormat = formatSpinner.selectedItem.toString()
+        val selectedDuration = durationSpinner.selectedItem.toString()
         generateVideoButton.isEnabled = false
         generateVideoButton.text = "Starting generation…"
         resultText.text = "Connecting to the AI video service…"
         Thread {
             try {
-                val createBody = JSONObject().put("prompt", idea)
+                val fullPrompt = "$idea. Video format: $selectedFormat. Target duration: $selectedDuration. Create a coherent cinematic video matching this request."
+                val createBody = JSONObject().put("prompt", fullPrompt)
                 val created = apiRequest("$base/api/videos", "POST", createBody)
                 val id = created.optString("id")
                 var status = created.optString("status", "starting")
