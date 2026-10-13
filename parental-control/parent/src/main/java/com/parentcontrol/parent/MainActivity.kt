@@ -24,7 +24,7 @@ class MainActivity : Activity() {
     private val ink = Color.rgb(30, 41, 59)
     private val muted = Color.rgb(100, 116, 139)
 
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); window.statusBarColor = navy; window.navigationBarColor = Color.rgb(245,247,252); window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR; showLogin() }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); window.statusBarColor = navy; window.navigationBarColor = Color.rgb(245,247,252); window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR; if (auth.currentUser == null) showLogin() else showDashboard() }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun shape(color: Int, radius: Int = 20, stroke: Int = 0): GradientDrawable =
@@ -128,6 +128,23 @@ class MainActivity : Activity() {
             db.child("families").child(uid).child("children").child(child).child("settings")
                 .updateChildren(mapOf("bedtime" to time,"dailyLimitMinutes" to limit,"updatedAt" to System.currentTimeMillis()))
                 .addOnSuccessListener { error("Saved", "Family preferences were saved to Firebase.") }
+                .addOnFailureListener { error("Save failed", explainDatabaseError(it.message ?: "Unknown database error")) }
+        }
+        settings.addView(text("03  •  APP CONTROLS",12f,blue,true).apply { setPadding(0,dp(18),0,dp(4)) })
+        settings.addView(text("Blocked apps & limits",20f,ink,true).apply { setPadding(0,dp(5),0,dp(3)) })
+        val blockedPackages=field(settings,"Blocked package names (comma-separated)","com.example.game, com.example.social")
+        val allowedTime=field(settings,"Daily limit per app (minutes)","60")
+        note(settings,"Enter Android package names, not display names. Saving a policy does not itself block an app; child-side enforcement is required.")
+        button(settings,"Save app-control policy") {
+            val parentUid=auth.currentUser?.uid ?: return@button
+            val child=childId.text.toString().trim()
+            if(child.isBlank()) { error("Child UID missing","Enter the child account UID before saving app policies."); return@button }
+            val perApp=allowedTime.text.toString().toIntOrNull()
+            if(perApp==null || perApp !in 1..1440) { error("Invalid app limit","Enter a whole number from 1 to 1440 minutes."); return@button }
+            val packages=blockedPackages.text.toString().split(",").map { it.trim() }.filter { it.isNotBlank() }.distinct()
+            db.child("families").child(parentUid).child("children").child(child).child("settings")
+                .updateChildren(mapOf("blockedPackages" to packages.joinToString(","), "perAppLimitMinutes" to perApp, "updatedAt" to System.currentTimeMillis()))
+                .addOnSuccessListener { error("Policy saved","App-control policy was saved to Firebase. Actual blocking requires a child-device enforcement service and permission.") }
                 .addOnFailureListener { error("Save failed", explainDatabaseError(it.message ?: "Unknown database error")) }
         }
         button(settings,"Refresh paired children",false) {
