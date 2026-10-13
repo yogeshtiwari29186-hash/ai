@@ -98,37 +98,16 @@ class MainActivity : Activity() {
         device.addView(text("YOUR DEVICE ID",12f,teal,true))
         device.addView(text(uid,12f,ink).apply { setPadding(0,dp(8),0,dp(8)); setTextIsSelectable(true) })
         note(device,"Share this ID with your parent if the setup instructions ask for it.")
-        val pair=card()
-        pair.addView(text("CONNECT TO PARENT",12f,teal,true))
-        pair.addView(text("Enter your pairing code",20f,ink,true).apply { setPadding(0,dp(8),0,dp(4)) })
-        note(pair,"Ask your parent to generate a fresh 6-digit code. It expires after 10 minutes.")
-        val code=field(pair,"6-digit code","123456")
-        button(pair,"Pair with parent") {
-            val entered=code.text.toString().trim()
-            if(!entered.matches(Regex("\\d{6}"))) { error("Code format is wrong","Enter all 6 digits from the Parent App."); return@button }
-            db.child("pairingCodes").child(entered).get().addOnSuccessListener { snap ->
-                val parentUid=snap.child("parentUid").getValue(String::class.java)
-                val expires=snap.child("expiresAt").getValue(Long::class.java) ?: 0L
-                val used=snap.child("used").getValue(Boolean::class.java) ?: true
-                if(parentUid.isNullOrBlank() || expires<System.currentTimeMillis() || used) {
-                    error("Pairing code not valid","This code may be wrong, expired, already used, or hidden by Firebase Rules. Ask the parent to create a new code. If it repeats, check Realtime Database Rules.")
-                    return@addOnSuccessListener
-                }
-                val updates=hashMapOf<String,Any>(
-                    "families/$parentUid/children/$uid/pairedAt" to System.currentTimeMillis(),
-                    "families/$parentUid/children/$uid/email" to (auth.currentUser?.email ?: ""),
-                    "pairingCodes/$entered/used" to true
-                )
-                db.updateChildren(updates).addOnSuccessListener {
-                    base("CONNECTED","You’re paired!","The family connection has been saved.")
-                    val success=card(); success.addView(text("✓  Connection saved",20f,teal,true))
-                    note(success,"Your parent can now save family preferences. This starter does not access your camera, messages, or screen.")
-                    button(success,"Refresh account status") { loadSettings() }
-                    button(success,"Sign out",false) { auth.signOut(); showLogin() }
-                }.addOnFailureListener { error("Pairing could not finish",explainDatabaseError(it.message ?: "Unknown database error")) }
-            }.addOnFailureListener { error("Could not check pairing code",explainDatabaseError(it.message ?: "Unknown database error")) }
+        val setup=card()
+        setup.addView(text("CONNECT TO YOUR FAMILY",12f,teal,true))
+        setup.addView(text("Share your Device ID",20f,ink,true).apply { setPadding(0,dp(8),0,dp(4)) })
+        note(setup,"Copy the Device ID above and share it directly with your parent. In the Parent App, they can enter it under Family Routine to save preferences. This free MVP does not use 6-digit codes.")
+        button(setup,"Copy Device ID") {
+            val cm=getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Child Device ID",uid))
+            Toast.makeText(this,"Device ID copied",Toast.LENGTH_SHORT).show()
         }
-        button(pair,"Sign out",false) { auth.signOut(); showLogin() }
+        button(setup,"Sign out",false) { auth.signOut(); showLogin() }
     }
     private fun loadSettings() {
         val uid=auth.currentUser?.uid ?: return
