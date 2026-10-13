@@ -138,7 +138,7 @@ class MainActivity : Activity() {
                     error("Paired devices", if(ids.isEmpty()) "No child devices are paired yet." else ids.joinToString("\\n"))
                 }.addOnFailureListener { error("Could not load devices", explainDatabaseError(it.message ?: "Unknown database error")) }
         }
-        button(settings,"Sign out",false) { auth.signOut(); showAuth() }
+        button(settings,"Sign out",false) { auth.signOut(); showLogin() }
         note(root,"Privacy note: this starter saves preferences; Android enforcement and live activity monitoring are not implemented yet.")
     }
     private fun createPairingCode() {
@@ -158,7 +158,7 @@ class MainActivity : Activity() {
     private fun explainDatabaseError(raw: String): String {
         val s=raw.lowercase()
         return if(s.contains("permission_denied") || s.contains("permission denied")) {
-            "Firebase rejected this database request (PERMISSION_DENIED).\n\nWhy it happens:\n• Realtime Database Rules do not allow this signed-in user to read/write this path.\n• The app may be using a different Firebase project/database URL.\n• The current rules may require a parent/child relationship that is not yet present.\n\nFix: Firebase Console → Realtime Database → Rules. Check rules for users/$, pairingCodes/$ and families/$; authorize only the signed-in owner and the intended paired parent/child. Do not enable public read/write.\n\nTechnical detail: $raw"
+            "Firebase rejected this database request (PERMISSION_DENIED).\n\nWhy it happens:\n• Realtime Database Rules do not allow this signed-in user to read/write this path.\n• The app may be using a different Firebase project/database URL.\n• The current rules may require a parent/child relationship that is not yet present.\n\nFix: Firebase Console → Realtime Database → Rules. Check rules for users/\$, pairingCodes/\$ and families/\$; authorize only the signed-in owner and the intended paired parent/child. Do not enable public read/write.\n\nTechnical detail: $raw"
         } else "Firebase could not complete the database request. Check internet, the selected Firebase project, Authentication status, and Realtime Database Rules.\n\nTechnical detail: $raw"
     }
     private fun explainAuthError(raw: String): String {
