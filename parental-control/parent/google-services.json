@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "919447864685",
+    "firebase_url": "https://carpenter-94746-default-rtdb.firebaseio.com",
+    "project_id": "carpenter-94746",
+    "storage_bucket": "carpenter-94746.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919447864685:android:1baacce26b88d1ea290664",
+        "android_client_info": { "package_name": "Com.my.carpenter" }
+      },
+      "oauth_client": [],
+      "api_key": [{ "current_key": "AIzaSyBAccYz00jasi5C3zjOx2yAYzEjv4DdGaU" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919447864685:android:76b0224f8e96bfdd290664",
+        "android_client_info": { "package_name": "com.moodhub.cantrol" }
+      },
+      "oauth_client": [],
+      "api_key": [{ "current_key": "AIzaSyBAccYz00jasi5C3zjOx2yAYzEjv4DdGaU" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    }
+  ],
+  "configuration_version": "1"
+}
