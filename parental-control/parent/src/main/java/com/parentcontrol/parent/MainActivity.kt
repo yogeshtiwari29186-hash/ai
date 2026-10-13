@@ -109,8 +109,8 @@ class MainActivity : Activity() {
         val pair=card()
         pair.addView(text("01  •  CONNECT A DEVICE",12f,blue,true))
         pair.addView(text("Pair your child’s app",20f,ink,true).apply { setPadding(0,dp(8),0,dp(4)) })
-        note(pair,"Generate a one-time code. Share it directly with your child; it expires in 10 minutes.")
-        button(pair,"Generate pairing code") { createPairingCode() }
+        note(pair,"Free setup: copy the Device ID from Child App and enter it in Family Routine below. No 6-digit code or paid backend is used.")
+        button(pair,"Use Child UID instead") { error("Free UID setup","Open Child App and copy the Device ID shown on its dashboard. Then scroll to Family Routine below, paste that UID into Child account UID, and save settings. This free MVP does not use 6-digit codes.") }
         val settings=card()
         settings.addView(text("02  •  FAMILY ROUTINE",12f,blue,true))
         settings.addView(text("Screen-time preferences",20f,ink,true).apply { setPadding(0,dp(8),0,dp(4)) })
