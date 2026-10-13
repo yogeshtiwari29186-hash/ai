@@ -96,7 +96,7 @@ class MainActivity : Activity() {
         base("CHILD SPACE","Your device","Pairing is visible and controlled by you.")
         val device=card()
         device.addView(text("YOUR DEVICE ID",12f,teal,true))
-        device.addView(text(uid,12f,ink).apply { setPadding(0,dp(8),0,dp(8)); textIsSelectable=true })
+        device.addView(text(uid,12f,ink).apply { setPadding(0,dp(8),0,dp(8)); setTextIsSelectable(true) })
         note(device,"Share this ID with your parent if the setup instructions ask for it.")
         val pair=card()
         pair.addView(text("CONNECT TO PARENT",12f,teal,true))
