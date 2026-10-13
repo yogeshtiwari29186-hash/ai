@@ -3,6 +3,12 @@ package com.example.aivideomaker
 import android.app.Activity
 import android.os.Bundle
 import android.content.Intent
+import android.app.DownloadManager
+import android.net.Uri
+import android.os.Environment
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -26,6 +32,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var durationSpinner: Spinner
     private lateinit var resultText: TextView
     private lateinit var voiceButton: Button
+    private lateinit var backendUrl: EditText
+    private lateinit var generateVideoButton: Button
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var currentPlan = ""
@@ -77,6 +85,25 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(generate, params(top = 18))
         generate.setOnClickListener { makePlan() }
 
+        root.addView(sectionTitle("3  Generate a real AI video"))
+        root.addView(label("Connect your deployed backend URL. The Replicate API key stays on the server, never inside the APK.", 13f, muted, false).apply {
+            setPadding(0, dp(8), 0, 0)
+        })
+        backendUrl = EditText(this).apply {
+            hint = "https://your-backend.example.com"
+            setHintTextColor(muted)
+            setTextColor(white)
+            textSize = 15f
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setBackgroundColor(panel)
+        }
+        root.addView(backendUrl, params(top = 10))
+        generateVideoButton = button("Generate AI video", accent)
+        root.addView(generateVideoButton, params(top = 10))
+        generateVideoButton.setOnClickListener { generateRealVideo() }
+
         root.addView(sectionTitle("Your storyboard"))
         resultText = label("Your script and scene prompts will appear here.", 14f, muted, false).apply {
             setPadding(dp(14), dp(15), dp(14), dp(15))
@@ -114,7 +141,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         actions.addView(share, params(top = 8))
         root.addView(actions)
-        root.addView(label("Important: this version creates a storyboard and voice narration. It does not yet render an AI-generated video file. A real text-to-video provider/API must be connected for that.", 12f, muted, false).apply {
+        root.addView(label("AI video generation requires a deployed backend and a provider account with available credits. The storyboard works locally even when the backend is not configured.", 12f, muted, false).apply {
             setPadding(0, dp(20), 0, 0)
         })
 
@@ -169,6 +196,99 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultText.setTextColor(white)
         voiceButton.isEnabled = true
         toast("Storyboard created.")
+    }
+
+
+    private fun generateRealVideo() {
+        val idea = prompt.text.toString().trim()
+        val base = backendUrl.text.toString().trim().trimEnd('/')
+        if (idea.length < 5) {
+            prompt.error = "Enter a video idea first."
+            return
+        }
+        if (!base.startsWith("https://")) {
+            backendUrl.error = "Use your deployed HTTPS backend URL."
+            toast("Deploy the backend and enter its HTTPS URL.")
+            return
+        }
+        generateVideoButton.isEnabled = false
+        generateVideoButton.text = "Starting generation…"
+        resultText.text = "Connecting to the AI video service…"
+        Thread {
+            try {
+                val createBody = JSONObject().put("prompt", idea)
+                val created = apiRequest("$base/api/videos", "POST", createBody)
+                val id = created.optString("id")
+                var status = created.optString("status", "starting")
+                var videoUrl = created.optString("videoUrl")
+                val error = created.optString("error")
+                if (id.isBlank() && videoUrl.isBlank()) {
+                    throw IllegalStateException(if (error.isNotBlank() && error != "null") error else "Backend did not return a generation ID.")
+                }
+                var attempts = 0
+                while (videoUrl.isBlank() && status !in listOf("succeeded", "failed", "canceled") && attempts < 180) {
+                    Thread.sleep(5000)
+                    val state = apiRequest("$base/api/videos/\${Uri.encode(id)}", "GET", null)
+                    status = state.optString("status", status)
+                    videoUrl = state.optString("videoUrl")
+                    val stateError = state.optString("error")
+                    runOnUiThread { resultText.text = "AI video generation status: $status\nPlease keep the app open while the status is checked." }
+                    if (status == "failed" || status == "canceled") {
+                        throw IllegalStateException(if (stateError.isNotBlank() && stateError != "null") stateError else "Video generation $status.")
+                    }
+                    attempts++
+                }
+                if (videoUrl.isBlank()) throw IllegalStateException("Generation is taking too long. Try again later; check your provider dashboard.")
+                if (!videoUrl.startsWith("https://")) throw IllegalStateException("The provider returned a non-HTTPS video URL.")
+                runOnUiThread {
+                    resultText.text = "AI video is ready!\nStarting download to your Downloads folder…"
+                    val request = DownloadManager.Request(Uri.parse(videoUrl))
+                        .setTitle("AI Video Maker video")
+                        .setDescription("Generated video")
+                        .setMimeType("video/mp4")
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "AI-Video-\${System.currentTimeMillis()}.mp4")
+                    val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    manager.enqueue(request)
+                    generateVideoButton.text = "Generate another AI video"
+                    toast("Video download started. Check Downloads.")
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    resultText.text = "AI video generation failed.\n\${e.message ?: "Unknown error"}\n\nYour storyboard is still available above."
+                    generateVideoButton.text = "Retry AI video generation"
+                    toast("Could not generate video.")
+                }
+            } finally {
+                runOnUiThread { generateVideoButton.isEnabled = true }
+            }
+        }.start()
+    }
+
+    private fun apiRequest(address: String, method: String, body: JSONObject?): JSONObject {
+        val connection = (URL(address).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 20000
+            readTimeout = 30000
+            setRequestProperty("Accept", "application/json")
+            if (body != null) {
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+        }
+        try {
+            if (body != null) connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            val json = try { JSONObject(response) } catch (_: Exception) { JSONObject() }
+            if (code !in 200..299) {
+                throw IllegalStateException(json.optString("error").ifBlank { "Backend returned HTTP $code." })
+            }
+            return json
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun timeLabel(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
