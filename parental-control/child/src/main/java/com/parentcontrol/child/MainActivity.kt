@@ -124,11 +124,11 @@ class MainActivity : Activity() {
                     val success=card(); success.addView(text("✓  Connection saved",20f,teal,true))
                     note(success,"Your parent can now save family preferences. This starter does not access your camera, messages, or screen.")
                     button(success,"Refresh account status") { loadSettings() }
-                    button(success,"Sign out",false) { auth.signOut(); showAuth() }
+                    button(success,"Sign out",false) { auth.signOut(); showLogin() }
                 }.addOnFailureListener { error("Pairing could not finish",explainDatabaseError(it.message ?: "Unknown database error")) }
             }.addOnFailureListener { error("Could not check pairing code",explainDatabaseError(it.message ?: "Unknown database error")) }
         }
-        button(pair,"Sign out",false) { auth.signOut(); showAuth() }
+        button(pair,"Sign out",false) { auth.signOut(); showLogin() }
     }
     private fun loadSettings() {
         val uid=auth.currentUser?.uid ?: return
@@ -139,7 +139,7 @@ class MainActivity : Activity() {
     private fun explainDatabaseError(raw:String):String {
         val s=raw.lowercase()
         return if(s.contains("permission_denied") || s.contains("permission denied")) {
-            "Firebase rejected this database request (PERMISSION_DENIED).\n\nLikely causes:\n• Realtime Database Rules deny this read/write path.\n• Pairing code is not readable by a signed-in child.\n• The app is pointed at a different Firebase project/database.\n\nFix: Firebase Console → Realtime Database → Rules. Review users/$, pairingCodes/$ and families/$ rules. Allow only the intended signed-in parent/child access; never enable public read/write.\n\nTechnical detail: $raw"
+            "Firebase rejected this database request (PERMISSION_DENIED).\n\nLikely causes:\n• Realtime Database Rules deny this read/write path.\n• Pairing code is not readable by a signed-in child.\n• The app is pointed at a different Firebase project/database.\n\nFix: Firebase Console → Realtime Database → Rules. Review users/\$, pairingCodes/\$ and families/\$ rules. Allow only the intended signed-in parent/child access; never enable public read/write.\n\nTechnical detail: $raw"
         } else "Firebase could not complete the request. Check internet, signed-in status, Firebase project/database URL, and Realtime Database Rules.\n\nTechnical detail: $raw"
     }
     private fun explainAuthError(raw:String):String {
