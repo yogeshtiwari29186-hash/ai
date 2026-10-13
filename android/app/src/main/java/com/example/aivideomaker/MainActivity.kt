@@ -223,7 +223,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val created = apiRequest("$base/api/videos", "POST", createBody)
                 val id = created.optString("id")
                 var status = created.optString("status", "starting")
-                var videoUrl = created.optString("videoUrl")
+                var videoUrl = created.optString("videoUrl").takeIf { it.startsWith("https://") }.orEmpty()
                 val error = created.optString("error")
                 if (id.isBlank() && videoUrl.isBlank()) {
                     throw IllegalStateException(if (error.isNotBlank() && error != "null") error else "Backend did not return a generation ID.")
@@ -233,7 +233,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     Thread.sleep(5000)
                     val state = apiRequest("$base/api/videos/${Uri.encode(id)}", "GET", null)
                     status = state.optString("status", status)
-                    videoUrl = state.optString("videoUrl")
+                    videoUrl = state.optString("videoUrl").takeIf { it.startsWith("https://") }.orEmpty()
                     val stateError = state.optString("error")
                     runOnUiThread { resultText.text = "AI video generation status: $status\nPlease keep the app open while the status is checked." }
                     if (status == "failed" || status == "canceled") {
