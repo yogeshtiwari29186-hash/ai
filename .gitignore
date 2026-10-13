@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+training/checkpoints/*.tmp
+training/checkpoints/*.json
+training/logs/
+# Android
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
